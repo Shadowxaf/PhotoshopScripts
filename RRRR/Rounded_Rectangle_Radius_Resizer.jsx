@@ -1,25 +1,36 @@
-﻿// Rounded Rectangle Radius Resizer
+﻿// Rounded Rectangle Radius Resizer v1.0.1
 // By David Jensen with help from ps-scripts.com
 
 #target photoshop
-
+var docRef = activeDocument;
 if (app.documents.length > 0){
 var allSelectedLayers;
 var changed = false;
-activeDocument.suspendHistory("Modify rounded rect", "main()");
+
+
+
+docRef.suspendHistory("Modify rounded rect", "main()");
+
+            
+            
 makeActiveByIndex(allSelectedLayers, false);
 }
 
 function main() {
+    var res = docRef.resolution;
+    if(res != 72){ 
+        docRef.resizeImage(undefined, undefined, 72, ResampleMethod.NONE);
+        app.refresh();
+    }
     allSelectedLayers = getSelectedLayersIdx();
     var selectedLayers = [];
     rects = new Array();
     for (var j = 0; j < allSelectedLayers.length; j++) {
         makeActiveByIndex([allSelectedLayers[j]], false);
-        if (activeDocument.pathItems.length > 0 && activeDocument.pathItems[activeDocument.pathItems.length - 1].kind == PathKind.VECTORMASK) {
+        if (docRef.pathItems.length > 0 && docRef.pathItems[docRef.pathItems.length - 1].kind == PathKind.VECTORMASK) {
             selectedLayers.push(allSelectedLayers[j]);
 
-            roundedRec = activeDocument.pathItems[activeDocument.pathItems.length - 1].subPathItems[0];
+            roundedRec = docRef.pathItems[docRef.pathItems.length - 1].subPathItems[0];
             l = roundedRec.pathPoints.length;
             upper = Infinity;
             lower = -Infinity;
@@ -40,7 +51,10 @@ function main() {
     }
 
 
-    if (selectedLayers.length == 0) return 0;
+    if (selectedLayers.length == 0 || activeDocument.activeLayer.isBackgroundLayer ){
+        if(res != 72) docRef.resizeImage(undefined, undefined, res, ResampleMethod.NONE);
+        return 0;
+        }
 
     createDialog = function() {
         var dlg = new Window('dialog', 'Rounded Rect', [100, 100, 250, 280]);
@@ -59,7 +73,7 @@ function main() {
 
     initializeDialog = function(w) {
         makeActiveByIndex([selectedLayers[0]], false);
-        roundedRec = activeDocument.pathItems[activeDocument.pathItems.length - 1].subPathItems[0];
+        roundedRec = docRef.pathItems[docRef.pathItems.length - 1].subPathItems[0];
         l = roundedRec.pathPoints.length;
         upper = rects[0].upper;
         lower = rects[0].lower;
@@ -117,7 +131,9 @@ function main() {
 
             if (changed == false) return;
             changed = false;
+            
 
+            
             for (var j = 0; j < selectedLayers.length; j++) {
                 makeActiveByIndex([selectedLayers[j]], false);
                 changeShapes(rects[j].left, rects[j].right, rects[j].upper, rects[j].lower);
@@ -207,7 +223,7 @@ function main() {
                     lineSubPathArray[0].closed = true
                     lineSubPathArray[0].entireSubPath = lineArray
 
-                    var myPathItem = activeDocument.pathItems.add("A Line2", lineSubPathArray);
+                    var myPathItem = docRef.pathItems.add("A Line2", lineSubPathArray);
 
                     // =======================================================
                     var idMk = charIDToTypeID("Mk  ");
@@ -245,6 +261,7 @@ function main() {
 
                 }
             }
+
             var idDslc = charIDToTypeID("Dslc");
             var desc4 = new ActionDescriptor();
             var idnull = charIDToTypeID("null");
@@ -267,6 +284,7 @@ function main() {
     if (runDialog(win) == 1) {
         change();
     }
+    if(res != 72) docRef.resizeImage(undefined, undefined, res, ResampleMethod.NONE);
 }
 
 function getSelectedLayersIdx() {
@@ -280,7 +298,7 @@ function getSelectedLayersIdx() {
         var selectedLayers = new Array();
         for (var i = 0; i < c; i++) {
             try {
-                activeDocument.backgroundLayer;
+                docRef.backgroundLayer;
                 selectedLayers.push(desc.getReference(i).getIndex());
             } catch (e) {
                 selectedLayers.push(desc.getReference(i).getIndex() + 1);
@@ -291,7 +309,7 @@ function getSelectedLayersIdx() {
         ref.putProperty(charIDToTypeID("Prpr"), charIDToTypeID("ItmI"));
         ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
         try {
-            activeDocument.backgroundLayer;
+            docRef.backgroundLayer;
             selectedLayers.push(executeActionGet(ref).getInteger(charIDToTypeID("ItmI")) - 1);
         } catch (e) {
             selectedLayers.push(executeActionGet(ref).getInteger(charIDToTypeID("ItmI")));
